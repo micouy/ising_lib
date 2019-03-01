@@ -1,0 +1,14 @@
+[package]
+name = "ising_lib"
+version = "0.1.0"
+authors = ["micouy <szpontaniczny@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+ndarray = "^0.12"
+rand = "^0.6"
+
+[dev-dependencies]
+pretty_assertions = "*"
+humantime = "^1.2"
+pbr = "*"
