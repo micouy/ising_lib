@@ -87,7 +87,7 @@ impl Lattice {
         self.size
     }
 
-    /// Returns the modulo operation on the `index + amt`, so that it stays
+    /// Returns the modulo operation on value `index + amt`, so that it stays
     /// within the bounds.
     fn roll_index(&self, (i, j): (usize, usize), amt: isize) -> (usize, usize) {
         let size = self.size as isize;
@@ -114,7 +114,7 @@ impl Lattice {
     }
 
     /// Returns the product of the `(ith, jth)` spin and the sum of two of its
-    /// neighbors.
+    /// neighbors (the right one and the bottom one).
     fn spin_times_two_neighbors(&self, (i, j): (usize, usize)) -> i32 {
         assert!(i < self.size && j < self.size);
 
