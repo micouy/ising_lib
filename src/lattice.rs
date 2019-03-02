@@ -196,28 +196,6 @@ impl Lattice {
             self.rng.gen_range(0, self.size) as usize,
         )
     }
-
-    /// sraj sie
-    pub fn display(&self) {
-        let image = self
-            .inner
-            .genrows()
-            .into_iter()
-            .map(|row| {
-                row.into_iter()
-                    .map(|cell| match cell {
-                        -1 => " .",
-                        1 => "##",
-                        _ => unreachable!(),
-                    })
-                    .collect::<Vec<&str>>()
-                    .join("")
-            })
-            .collect::<Vec<String>>()
-            .join("\n");
-
-        println!("{}", image);
-    }
 }
 
 #[cfg(test)]
