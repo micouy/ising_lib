@@ -19,3 +19,6 @@ pretty_assertions = "^0.6"
 chrono = "^0.4"
 pbr = "^1.0"
 rayon = "^1.0"
+
+[badges]
+travis-ci = { repository = "micouy/ising_lib" }
