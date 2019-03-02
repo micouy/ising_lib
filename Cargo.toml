@@ -1,8 +1,14 @@
 [package]
 name = "ising_lib"
+description = "Tools for simulating Ising model."
+keywords = ["ising", "physics", "simulation"]
+categories = ["science", "simulation"]
 version = "0.1.0"
 authors = ["micouy <szpontaniczny@gmail.com>"]
 edition = "2018"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/micouy/ising_lib"
 
 [dependencies]
 ndarray = "^0.12"
