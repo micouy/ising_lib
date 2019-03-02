@@ -2,12 +2,12 @@
 // an issue or create a PR if you have any idea why or how to solve it.
 #![allow(non_snake_case)]
 
-use ::humantime::format_rfc3339_seconds;
+use ::chrono::prelude::*;
 use ::pbr::ProgressBar;
 use ::rand::prelude::*;
 use ::rayon::prelude::*;
 
-use std::{fs::OpenOptions, io::prelude::*, time::SystemTime};
+use std::{fs::OpenOptions, io::prelude::*};
 
 use ising_lib::prelude::*;
 
@@ -162,11 +162,9 @@ fn main() {
     let _ = handle.join();
 
     let path = {
-        format!(
-            "{}/results-parallel-{}.txt",
-            DIR_PATH,
-            format_rfc3339_seconds(SystemTime::now())
-        )
+        let now = Local::now().format("%d.%m.%Y-%H.%M").to_string();
+
+        format!("{}/results-{}.txt", DIR_PATH, now)
     };
 
     let mut file = OpenOptions::new()

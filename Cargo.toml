@@ -15,7 +15,7 @@ ndarray = "^0.12"
 rand = "^0.6"
 
 [dev-dependencies]
-pretty_assertions = "*"
-humantime = "^1.2"
-pbr = "*"
-rayon = "*"
+pretty_assertions = "^0.6"
+chrono = "^0.4"
+pbr = "^1.0"
+rayon = "^1.0"
