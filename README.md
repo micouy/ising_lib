@@ -1,4 +1,5 @@
 # `ising_lib`
+[![Docs.rs badge](https://docs.rs/ising_lib/badge.svg)](https://docs.rs/ising_lib/)
 This crate contains all tools needed to run a simplified* [Ising model]
 simulation. The code is fully documented and tested. Since a good performance,
 code readability and intuitive usage are my goals, I am open to your
