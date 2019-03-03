@@ -87,14 +87,18 @@ impl Lattice {
         self.size
     }
 
-    /// Returns the modulo operation on value `index + amt`, so that it stays
-    /// within the bounds.
-    fn roll_index(&self, (i, j): (usize, usize), amt: isize) -> (usize, usize) {
+    /// Returns the indices of the spins on right of and below the `(ith, jth)`
+    /// spin.
+    pub fn gen_neighbor_indices(
+        &self,
+        (i, j): (usize, usize),
+        amt: isize,
+    ) -> ((usize, usize), (usize, usize)) {
         let size = self.size as isize;
 
         (
-            ((i as isize + size + amt) % size) as usize,
-            ((j as isize + size + amt) % size) as usize,
+            (i, ((j as isize + size + amt) % size) as usize),
+            (((i as isize + size + amt) % size) as usize, j),
         )
     }
 
@@ -103,11 +107,11 @@ impl Lattice {
     fn spin_times_all_neighbors(&self, (i, j): (usize, usize)) -> i32 {
         assert!(i < self.size && j < self.size);
 
-        let (i_1, j_1) = self.roll_index((i, j), -1);
-        let (i_2, j_2) = self.roll_index((i, j), 1);
+        let (n_1, n_2) = self.gen_neighbor_indices((i, j), -1);
+        let (n_3, n_4) = self.gen_neighbor_indices((i, j), -1);
 
         self.inner[(i, j)]
-            * [(i_1, j), (i_2, j), (i, j_1), (i, j_2)]
+            * [n_1, n_2, n_3, n_4]
                 .iter()
                 .map(|ix| self.inner[*ix])
                 .sum::<i32>()
@@ -118,10 +122,10 @@ impl Lattice {
     fn spin_times_two_neighbors(&self, (i, j): (usize, usize)) -> i32 {
         assert!(i < self.size && j < self.size);
 
-        let (i_r, j_r) = self.roll_index((i, j), 1);
+        let (n_1, n_2) = self.gen_neighbor_indices((i, j), 1);
 
         self.inner[(i, j)]
-            * [(i_r, j), (i, j_r)]
+            * [n_1, n_2]
                 .iter()
                 .map(|ix| self.inner[*ix])
                 .sum::<i32>()
