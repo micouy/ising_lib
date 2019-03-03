@@ -10,6 +10,9 @@ license = "MIT"
 readme = "README.md"
 repository = "https://github.com/micouy/ising_lib"
 
+[badges]
+travis-ci = { repository = "micouy/ising_lib" }
+
 [dependencies]
 ndarray = "^0.12"
 rand = "^0.6"
@@ -19,6 +22,8 @@ pretty_assertions = "^0.6"
 chrono = "^0.4"
 pbr = "^1.0"
 rayon = "^1.0"
+criterion = "0.2"
 
-[badges]
-travis-ci = { repository = "micouy/ising_lib" }
+[[bench]]
+name = "lattice"
+harness = false
