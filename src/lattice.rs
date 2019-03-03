@@ -87,8 +87,7 @@ impl Lattice {
         self.size
     }
 
-    /// Returns the indices of the spins on right of and below the `(ith, jth)`
-    /// spin.
+    /// TODO
     pub fn gen_neighbor_indices(
         &self,
         (i, j): (usize, usize),
@@ -107,7 +106,7 @@ impl Lattice {
     fn spin_times_all_neighbors(&self, (i, j): (usize, usize)) -> i32 {
         assert!(i < self.size && j < self.size);
 
-        let (n_1, n_2) = self.gen_neighbor_indices((i, j), -1);
+        let (n_1, n_2) = self.gen_neighbor_indices((i, j), 1);
         let (n_3, n_4) = self.gen_neighbor_indices((i, j), -1);
 
         self.inner[(i, j)]
