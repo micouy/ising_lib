@@ -10,7 +10,7 @@ use ::rand::prelude::*;
 /// each other's neighbors.
 pub struct Lattice {
     size: usize,
-    rng: ThreadRng,
+    rng: Box<dyn RngCore>,
     inner: Array2<i32>,
 }
 
@@ -18,7 +18,7 @@ impl Lattice {
     /// Creates a new [`Lattice`] of a certain size with randomly generated
     /// spins.
     pub fn new(size: usize) -> Self {
-        let mut rng = thread_rng();
+        let mut rng = Box::new(SmallRng::from_entropy());
         let spins: [i32; 2] = [-1, 1];
         let inner = Array2::from_shape_fn((size, size), |_| {
             *spins[..].choose(&mut rng).unwrap()
@@ -78,7 +78,7 @@ impl Lattice {
         Lattice {
             size: array.shape()[0],
             inner: array,
-            rng: thread_rng(),
+            rng: Box::new(SmallRng::from_entropy()),
         }
     }
 
