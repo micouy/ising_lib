@@ -125,10 +125,7 @@ impl Lattice {
         let (n_1, n_2) = self.gen_neighbor_indices((i, j), 1);
 
         self.inner[(i, j)]
-            * [n_1, n_2]
-                .iter()
-                .map(|ix| self.inner[*ix])
-                .sum::<i32>()
+            * [n_1, n_2].iter().map(|ix| self.inner[*ix]).sum::<i32>()
     }
 
     /// Returns the difference of energy that would be caused by
