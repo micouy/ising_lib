@@ -4,11 +4,9 @@ use ::chrono::prelude::*;
 use ::pbr::ProgressBar;
 use ::rand::prelude::*;
 
-use std::{fs::OpenOptions, io::prelude::*};
+use std::{env::args, path::Path};
 
 use ising_lib::prelude::*;
-
-const DIR_PATH: &str = "results";
 
 struct Params {
     T_range: (f64, f64),
@@ -28,11 +26,39 @@ struct Record {
     X: f64,
 }
 
+fn compose_results(records: &[Record]) -> String {
+    let format_record = |r: &Record| {
+        format!("{:>5.2}{:>30.5}{:>15.5}{:>20.10}", r.T, r.dE, r.I, r.X)
+    };
+    let headers = format!("{:>5}{:>30}{:>15}{:>20}", "T", "dE", "I", "X");
+
+    let records = records
+        .iter()
+        .map(format_record)
+        .collect::<Vec<String>>()
+        .join("\n");
+
+    let mut contents = format!("{headers}\n{records}\n", headers=headers, records=records);
+    contents.push_str("\n");
+
+    contents
+}
+
+fn compose_path(dir: &str) -> String {
+    let now = Local::now().format("%d.%m.%Y-%H.%M").to_string();
+
+    format!("{}/results-{}.txt", dir, now)
+}
+
+fn cmp_by_T(a: &Record, b: &Record) -> std::cmp::Ordering {
+    a.T.partial_cmp(&b.T).unwrap_or(std::cmp::Ordering::Less)
+}
+
 fn main() {
     let size = 50;
     let params = Params {
         // the phase transition occurs at ~2.29
-        T_range: (0.2, 4.0),
+        T_range: (0.1, 4.0),
         // allow the spin lattice to "cool down"
         flips_to_skip: 50_000,
         // the more measurements taken at each T, the more precise the results
@@ -46,13 +72,19 @@ fn main() {
         K: 1.0,
     };
 
+    let dir_name = args()
+        .nth(1)
+        .expect("Specify the directory you want to save the results to.");
+
+    // make sure it's a valid directory
+    assert!(Path::new(&dir_name).is_dir());
+
     let mut rng = thread_rng();
     let mut lattice = Lattice::new(params.lattice_size);
     let Ts: Vec<f64> =
         TRange::new_step(params.T_range.0, params.T_range.1, 0.1).collect();
 
     let bar_count = (params.measurements_per_T * Ts.len()) as u64;
-
     let mut pb = ProgressBar::new(bar_count);
     pb.set_width(Some(80));
     pb.show_message = true;
@@ -112,45 +144,18 @@ fn main() {
                 .unzip::<_, _, Vec<_>, Vec<_>>();
 
             let dE = calc_dE(&Es, T);
-            let I = Is.iter().sum::<f64>() / Is.len() as f64;
+            let I = calc_I(&Is);
             let X = calc_X(&Es);
 
             Record { T, dE, I, X }
         })
         .collect();
 
-    records.sort_by(|a, b| {
-        a.T.partial_cmp(&b.T).unwrap_or(std::cmp::Ordering::Less)
-    });
-
     pb.finish_print("Finished!");
 
-    let contents = {
-        let headers = format!("{:>5}{:>30}{:>15}{:>20}", "T", "dE", "I", "X");
-        let results = records
-            .iter()
-            .map(|r| {
-                format!("{:>5.2}{:>30.5}{:>15.5}{:>20.10}", r.T, r.dE, r.I, r.X)
-            })
-            .collect::<Vec<String>>()
-            .join("\n");
-        let mut contents = vec![headers, results].join("\n");
-        contents.push_str("\n");
+    let path = compose_path(&dir_name);
+    records.sort_by(cmp_by_T);
+    let results = compose_results(&records);
 
-        contents
-    };
-
-    let path = {
-        let now = Local::now().format("%d.%m.%Y-%H.%M").to_string();
-
-        format!("{}/results-{}.txt", DIR_PATH, now)
-    };
-
-    let mut file = OpenOptions::new()
-        .write(true)
-        .truncate(true)
-        .create(true)
-        .open(path)
-        .unwrap();
-    file.write_all(contents.as_bytes()).unwrap();
+    std::fs::write(path, results.as_bytes()).unwrap();
 }
