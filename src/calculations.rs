@@ -19,6 +19,11 @@ pub fn calc_X(Is: &[f64]) -> f64 {
     avg_I_sq - avg_I.powi(2)
 }
 
+/// Calculates average magnetization.
+pub fn calc_I(Is: &[f64]) -> f64 {
+    Is.iter().sum::<f64>() / Is.len() as f64
+}
+
 /// Calculates the probability of a flip based on the energy difference it would
 /// cause and the temperature.
 pub fn calc_flip_probability(E_diff: f64, T: f64, K: f64) -> f64 {
@@ -123,6 +128,15 @@ mod test {
         let X = calc_X(Is);
 
         assert!(float_error(X, 0.05) < 0.01);
+    }
+
+    #[test]
+    fn test_calc_magnetization() {
+        let Is = &[0.2, 0.4, 0.6, 0.8];
+
+        let I = calc_I(Is);
+
+        assert!(float_error(I, 0.5) < 0.01);
     }
 
     #[test]
