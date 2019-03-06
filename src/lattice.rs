@@ -8,17 +8,15 @@ use ::rand::prelude::*;
 ///
 /// The lattice behaves like a torus - spins on opposite edges are considered
 /// each other's neighbors.
-pub struct Lattice {
+pub struct Lattice<R: RngCore> {
     size: usize,
-    rng: Box<dyn RngCore>,
+    rng: R,
     inner: Array2<i32>,
 }
 
-impl Lattice {
-    /// Creates a new [`Lattice`] of a certain size with randomly generated
-    /// spins.
-    pub fn new(size: usize) -> Self {
-        let mut rng = Box::new(SmallRng::from_entropy());
+impl<R: RngCore> Lattice<R> {
+    /// Creates a new lattice from provided RNG with randomly generated spins.
+    pub fn from_rng(size: usize, mut rng: R) -> Self {
         let spins: [i32; 2] = [-1, 1];
         let inner = Array2::from_shape_fn((size, size), |_| {
             *spins[..].choose(&mut rng).unwrap()
@@ -27,16 +25,18 @@ impl Lattice {
         Self { size, inner, rng }
     }
 
-    /// Creates a new [`Lattice`] from [`Array2<i32>`][ndarray::Array2].
+    /// Creates a new lattice from provided array and RNG.
     ///
     /// # Examples
     ///
     /// ```
     /// # fn main() -> Result<(), Box<std::error::Error>> {
     /// # use ::ndarray::prelude::*;
+    /// # use ::rand::prelude::*;
     /// # use ising_lib::prelude::*;
     /// let array = Array::from_shape_vec((2, 2), vec![1, -1, 1, -1])?;
-    /// let lattice = Lattice::from_array(array);
+    /// let rng = SmallRng::from_entropy();
+    /// let lattice = Lattice::from_array_rng(array, rng);
     /// # Ok(())
     /// # }
     /// ```
@@ -50,10 +50,12 @@ impl Lattice {
     /// ```should_panic
     /// # fn main() -> Result<(), Box<std::error::Error>> {
     /// # use ::ndarray::prelude::*;
+    /// # use ::rand::prelude::*;
     /// # use ising_lib::prelude::*;
     /// let array = Array::from_shape_vec((2, 2), vec![5, -1, 1, -1])?;
     /// //                                             ↑ incorrect spin value
-    /// let lattice = Lattice::from_array(array);
+    /// let rng = SmallRng::from_entropy();
+    /// let lattice = Lattice::from_array_rng(array, rng);
     /// # Ok(())
     /// # }
     /// ```
@@ -61,14 +63,16 @@ impl Lattice {
     /// ```should_panic
     /// # fn main() -> Result<(), Box<std::error::Error>> {
     /// # use ::ndarray::prelude::*;
+    /// # use ::rand::prelude::*;
     /// # use ising_lib::prelude::*;
     /// let array = Array::from_shape_vec((1, 4), vec![1, 1, 1, 1])?;
     /// //                                 ↑  ↑ array isn't square
-    /// let lattice = Lattice::from_array(array);
+    /// let rng = SmallRng::from_entropy();
+    /// let lattice = Lattice::from_array_rng(array, rng);
     /// # Ok(())
     /// # }
     /// ```
-    pub fn from_array(array: Array2<i32>) -> Self {
+    pub fn from_array_rng(array: Array2<i32>, rng: R) -> Self {
         assert!(array.is_square(), "Array is not square.");
         assert!(
             array.iter().all(|spin| *spin == 1 || *spin == -1),
@@ -78,7 +82,7 @@ impl Lattice {
         Lattice {
             size: array.shape()[0],
             inner: array,
-            rng: Box::new(SmallRng::from_entropy()),
+            rng: rng,
         }
     }
 
@@ -198,6 +202,22 @@ impl Lattice {
     }
 }
 
+impl Lattice<SmallRng> {
+    /// Creates a new of a certain size with randomly generated
+    /// spins. [`SmallRng`][rand::prelude::SmallRng] is used as a RNG.
+    pub fn new(size: usize) -> Self {
+        Lattice::<SmallRng>::from_rng(size, SmallRng::from_entropy())
+    }
+
+    /// Creates a new lattice from provided array of spins.
+    /// [`SmallRng`][rand::prelude::SmallRng] is used as a RNG.
+    ///
+    /// See [`Lattice::from_array_rng`].
+    pub fn from_array(array: Array2<i32>) -> Self {
+        Lattice::<SmallRng>::from_array_rng(array, SmallRng::from_entropy())
+    }
+}
+
 #[cfg(test)]
 mod test {
     use ::pretty_assertions::assert_eq;
@@ -209,15 +229,34 @@ mod test {
     }
 
     #[test]
-    fn test_create_lattice() {
+    fn test_lattice_from_rng() {
+        let rng = SmallRng::from_entropy();
+        let lattice = Lattice::from_rng(17, rng);
+
+        assert_eq!(lattice.size(), 17);
+    }
+
+    #[test]
+    fn test_lattice_from_array_rng() {
+        let array = Array::from_shape_vec((2, 2), vec![1, -1, 1, -1]).unwrap();
+        let rng = SmallRng::from_entropy();
+
+        let lattice = Lattice::from_array_rng(array, rng);
+
+        assert_eq!(lattice.size(), 2);
+    }
+
+    #[test]
+    fn test_lattice_new() {
         let lattice = Lattice::new(40);
 
         assert_eq!(lattice.size(), 40);
     }
 
     #[test]
-    fn test_create_lattice_from_array() {
+    fn test_lattice_from_array() {
         let array = Array::from_shape_vec((2, 2), vec![1, -1, 1, -1]).unwrap();
+
         let lattice = Lattice::from_array(array);
 
         assert_eq!(lattice.size(), 2);
