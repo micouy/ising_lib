@@ -38,7 +38,11 @@ fn compose_results(records: &[Record]) -> String {
         .collect::<Vec<String>>()
         .join("\n");
 
-    let mut contents = format!("{headers}\n{records}\n", headers=headers, records=records);
+    let mut contents = format!(
+        "{headers}\n{records}\n",
+        headers = headers,
+        records = records
+    );
     contents.push_str("\n");
 
     contents
