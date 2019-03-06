@@ -84,7 +84,7 @@ fn main() {
     assert!(Path::new(&dir_name).is_dir());
 
     let mut rng = thread_rng();
-    let mut lattice = Lattice::new(params.lattice_size);
+    let mut lattice = Lattice::new((params.lattice_size, params.lattice_size));
     let Ts: Vec<f64> =
         TRange::new_step(params.T_range.0, params.T_range.1, 0.1).collect();
 
