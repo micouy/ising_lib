@@ -21,11 +21,13 @@ fn bench_calculate_flip_probability(c: &mut Criterion) {
 fn bench_measure_E(c: &mut Criterion) {
     let lattice = Lattice::new(50);
 
-    c.bench_function("calculate E", move |b| {
-        let E = lattice.measure_E(1.0);
+    c.bench_function("measure E", move |b| {
+        b.iter(|| {
+            let E = lattice.measure_E(1.0);
+        })
     });
 }
 
-criterion_group!(benches, bench_calculate_flip_probability, bench_calculate_E);
+criterion_group!(benches, bench_calculate_flip_probability, bench_measure_E);
 
 criterion_main!(benches);
