@@ -4,13 +4,8 @@ use ::criterion::{criterion_group, criterion_main, Criterion};
 
 use ::ising_lib::prelude::*;
 
-fn bench_generate_random_spin_index(c: &mut Criterion) {
-    let mut lattice = Lattice::new(50);
-
-    c.bench_function("generate random spin index", move |b| {
-        b.iter(|| lattice.gen_random_index())
-    });
-}
+// NOTE
+// To keep the results consistent, always run set lattice size to 50.
 
 fn bench_calculate_flip_probability(c: &mut Criterion) {
     let lattice = Lattice::new(50);
@@ -23,9 +18,14 @@ fn bench_calculate_flip_probability(c: &mut Criterion) {
     });
 }
 
-criterion_group!(
-    benches,
-    bench_generate_random_spin_index,
-    bench_calculate_flip_probability,
-);
+fn bench_measure_E(c: &mut Criterion) {
+    let lattice = Lattice::new(50);
+
+    c.bench_function("calculate E", move |b| {
+        let E = lattice.measure_E(1.0);
+    });
+}
+
+criterion_group!(benches, bench_calculate_flip_probability, bench_calculate_E);
+
 criterion_main!(benches);
