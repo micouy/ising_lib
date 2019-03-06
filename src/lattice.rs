@@ -3,7 +3,7 @@
 use ::ndarray::prelude::*;
 use ::rand::prelude::*;
 
-/// Struct which encapsulates the spin lattice and all the operations performed
+/// A struct encapsulating the spin lattice and all the operations performed
 /// on it.
 ///
 /// The lattice behaves like a torus - spins on opposite edges are considered
@@ -17,14 +17,14 @@ pub struct Lattice<R: RngCore> {
 }
 
 impl<R: RngCore> Lattice<R> {
-    /// Creates a new lattice from provided RNG with randomly generated spins.
+    /// Create a new lattice from provided RNG with randomly generated spins.
     pub fn from_rng(size: (usize, usize), mut rng: R) -> Self {
         let inner = Array2::from_shape_fn(size, |_| *[-1, 1].choose(&mut rng).unwrap());
 
         Self::from_array_rng(inner, rng)
     }
 
-    /// Creates a new lattice from provided array and RNG.
+    /// Create a new lattice from provided array and RNG.
     ///
     /// # Examples
     ///
@@ -89,12 +89,12 @@ impl<R: RngCore> Lattice<R> {
         }
     }
 
-    /// Returns the dimensions of the lattice.
+    /// Return lattice's dimensions.
     pub fn dims(&self) -> (usize, usize) {
         self.dims
     }
 
-    /// Returns the product of the `(ith, jth)` spin and the sum of all of its
+    /// Return the product of the `(ith, jth)` spin and the sum of all of its
     /// neighbors.
     fn spin_times_all_neighbors(&self, ix: (usize, usize)) -> i32 {
         self.inner[ix]
@@ -104,7 +104,7 @@ impl<R: RngCore> Lattice<R> {
                 .sum::<i32>()
     }
 
-    /// Returns the product of the `(ith, jth)` spin and the sum of two of its
+    /// Return the product of the `(ith, jth)` spin and the sum of two of its
     /// neighbors (the right one and the bottom one).
     fn spin_times_two_neighbors(&self, ix: (usize, usize)) -> i32 {
         self.inner[ix]
@@ -114,7 +114,7 @@ impl<R: RngCore> Lattice<R> {
                 .sum::<i32>()
     }
 
-    /// Returns the difference of energy that would be caused by
+    /// Return the difference of energy that would be caused by
     /// flipping the `(ith, jth)` spin without actually doing it.
     /// Used to determine the probability of a flip.
     ///
@@ -135,7 +135,7 @@ impl<R: RngCore> Lattice<R> {
     ///
     /// # Panics
     ///
-    /// The function will panic if the index is out of bounds.
+    /// This function will panic if the index is out of bounds.
     ///
     /// ```should_panic
     /// # use ising_lib::prelude::*;
@@ -146,7 +146,7 @@ impl<R: RngCore> Lattice<R> {
         2.0 * J * f64::from(self.spin_times_all_neighbors((i, j)))
     }
 
-    /// Returns the energy of the lattice.
+    /// Return the energy of the lattice.
     pub fn measure_E(&self, J: f64) -> f64 {
         -J * f64::from(
             self.inner
@@ -156,14 +156,14 @@ impl<R: RngCore> Lattice<R> {
         )
     }
 
-    /// Returns the magnetization of the lattice. The magnetization is
+    /// Return the magnetization of the lattice. The magnetization is
     /// a value in range `[0.0, 1.0]` and it is the absolute value of the mean
     /// spin value.
     pub fn measure_I(&self) -> f64 {
         f64::from(self.inner.sum().abs()) / f64::from(self.n_of_spins)
     }
 
-    /// Flips the `(ith, jth)` spin.
+    /// Flip the `(ith, jth)` spin.
     ///
     /// # Panics
     ///
@@ -172,7 +172,7 @@ impl<R: RngCore> Lattice<R> {
         *self.inner.get_mut(ix).unwrap() *= -1;
     }
 
-    /// Returns a valid, randomly generated spin index.
+    /// Return a valid, randomly generated spin index.
     pub fn gen_random_index(&mut self) -> (usize, usize) {
         (
             self.rng.gen_range(0, self.dims.0),
@@ -182,13 +182,13 @@ impl<R: RngCore> Lattice<R> {
 }
 
 impl Lattice<SmallRng> {
-    /// Creates a new of certain dimensions with randomly generated
+    /// Create a new of certain dimensions with randomly generated
     /// spins. [`SmallRng`][rand::prelude::SmallRng] is used as a RNG.
     pub fn new(dims: (usize, usize)) -> Self {
         Self::from_rng(dims, SmallRng::from_entropy())
     }
 
-    /// Creates a new lattice from provided array of spins.
+    /// Create a new lattice from provided array of spins.
     /// [`SmallRng`][rand::prelude::SmallRng] is used as a RNG.
     ///
     /// See [`Lattice::from_array_rng`].
