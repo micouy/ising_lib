@@ -80,8 +80,6 @@ impl<R: RngCore> Lattice<R> {
             ]
         });
 
-        dbg!(&neighbors);
-
         Lattice {
             dims: (width, height),
             inner: array,
