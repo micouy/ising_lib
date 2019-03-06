@@ -86,7 +86,7 @@ fn main() {
     // make sure it's a valid directory
     assert!(Path::new(&dir_name).is_dir());
 
-    let Ts = TRange::new_step(params.T_range.0, params.T_range.1, 0.1)
+    let Ts = TRange::from_step(params.T_range.0, params.T_range.1, 0.1)
         .collect::<Vec<f64>>();
 
     let bar_count = (params.measurements_per_T * Ts.len()) as u64;
