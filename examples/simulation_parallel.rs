@@ -7,11 +7,9 @@ use ::pbr::ProgressBar;
 use ::rand::prelude::*;
 use ::rayon::prelude::*;
 
-use std::{fs::OpenOptions, io::prelude::*};
+use std::{env::args, path::Path};
 
 use ising_lib::prelude::*;
-
-const DIR_PATH: &str = "results";
 
 struct Params {
     T_range: (f64, f64),
@@ -29,6 +27,38 @@ struct Record {
     dE: f64,
     I: f64,
     X: f64,
+}
+
+fn compose_results(records: &[Record]) -> String {
+    let format_record = |r: &Record| {
+        format!("{:>5.2}{:>30.5}{:>15.5}{:>20.10}", r.T, r.dE, r.I, r.X)
+    };
+    let headers = format!("{:>5}{:>30}{:>15}{:>20}", "T", "dE", "I", "X");
+
+    let records = records
+        .iter()
+        .map(format_record)
+        .collect::<Vec<String>>()
+        .join("\n");
+
+    let mut contents = format!(
+        "{headers}\n{records}\n",
+        headers = headers,
+        records = records
+    );
+    contents.push_str("\n");
+
+    contents
+}
+
+fn compose_path(dir: &str) -> String {
+    let now = Local::now().format("%d.%m.%Y-%H.%M").to_string();
+
+    format!("{}/results-{}.txt", dir, now)
+}
+
+fn cmp_by_T(a: &Record, b: &Record) -> std::cmp::Ordering {
+    a.T.partial_cmp(&b.T).unwrap_or(std::cmp::Ordering::Less)
 }
 
 fn main() {
@@ -49,7 +79,14 @@ fn main() {
         K: 1.0,
     };
 
-    let Ts = TRange::new_step(params.T_range.0, params.T_range.1, 0.1)
+    let dir_name = args()
+        .nth(1)
+        .expect("Specify the directory you want to save the results to.");
+
+    // make sure it's a valid directory
+    assert!(Path::new(&dir_name).is_dir());
+
+    let Ts = TRange::from_step(params.T_range.0, params.T_range.1, 0.1)
         .collect::<Vec<f64>>();
 
     let bar_count = (params.measurements_per_T * Ts.len()) as u64;
@@ -79,7 +116,7 @@ fn main() {
         .into_par_iter() // notice the `into_par_iter`
         .map(|(T, pb_tx)| {
             let mut rng = thread_rng();
-            let mut lattice = Lattice::new(params.lattice_size);
+            let mut lattice = Lattice::new((params.lattice_size, params.lattice_size));
 
             // "cool" the lattice to its natural state at temperature `T`
             (0..params.flips_to_skip).for_each(|_| {
@@ -140,38 +177,11 @@ fn main() {
         })
         .collect();
 
-    records.sort_by(|a, b| {
-        a.T.partial_cmp(&b.T).unwrap_or(std::cmp::Ordering::Less)
-    });
-
-    let contents = {
-        let headers = format!("{:>5}{:>30}{:>15}{:>20}", "T", "dE", "I", "X");
-        let results = records
-            .iter()
-            .map(|r| {
-                format!("{:>5.2}{:>30.5}{:>15.5}{:>20.10}", r.T, r.dE, r.I, r.X)
-            })
-            .collect::<Vec<String>>()
-            .join("\n");
-        let mut contents = vec![headers, results].join("\n");
-        contents.push_str("\n");
-
-        contents
-    };
-
     let _ = handle.join();
 
-    let path = {
-        let now = Local::now().format("%d.%m.%Y-%H.%M").to_string();
+    let path = compose_path(&dir_name);
+    records.sort_by(cmp_by_T);
+    let results = compose_results(&records);
 
-        format!("{}/results-{}.txt", DIR_PATH, now)
-    };
-
-    let mut file = OpenOptions::new()
-        .write(true)
-        .truncate(true)
-        .create(true)
-        .open(path)
-        .unwrap();
-    file.write_all(contents.as_bytes()).unwrap();
+    std::fs::write(path, results.as_bytes()).unwrap();
 }

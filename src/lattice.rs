@@ -3,131 +3,118 @@
 use ::ndarray::prelude::*;
 use ::rand::prelude::*;
 
-/// Struct which encapsulates the spin lattice and all the operations performed
+/// A struct encapsulating the spin lattice and all the operations performed
 /// on it.
 ///
 /// The lattice behaves like a torus - spins on opposite edges are considered
 /// each other's neighbors.
-pub struct Lattice {
-    size: usize,
-    rng: Box<dyn RngCore>,
+pub struct Lattice<R: RngCore> {
+    dims: (usize, usize),
+    n_of_spins: i32,
+    rng: R,
     inner: Array2<i32>,
+    neighbors: Array2<[(usize, usize); 4]>,
 }
 
-impl Lattice {
-    /// Creates a new [`Lattice`] of a certain size with randomly generated
-    /// spins.
-    pub fn new(size: usize) -> Self {
-        let mut rng = Box::new(SmallRng::from_entropy());
-        let spins: [i32; 2] = [-1, 1];
-        let inner = Array2::from_shape_fn((size, size), |_| {
-            *spins[..].choose(&mut rng).unwrap()
-        });
+impl<R: RngCore> Lattice<R> {
+    /// Create a new lattice from provided RNG with randomly generated spins.
+    pub fn from_rng(size: (usize, usize), mut rng: R) -> Self {
+        let inner = Array2::from_shape_fn(size, |_| *[-1, 1].choose(&mut rng).unwrap());
 
-        Self { size, inner, rng }
+        Self::from_array_rng(inner, rng)
     }
 
-    /// Creates a new [`Lattice`] from [`Array2<i32>`][ndarray::Array2].
+    /// Create a new lattice from provided array and RNG.
     ///
     /// # Examples
     ///
     /// ```
     /// # fn main() -> Result<(), Box<std::error::Error>> {
     /// # use ::ndarray::prelude::*;
+    /// # use ::rand::prelude::*;
     /// # use ising_lib::prelude::*;
     /// let array = Array::from_shape_vec((2, 2), vec![1, -1, 1, -1])?;
-    /// let lattice = Lattice::from_array(array);
+    /// let rng = SmallRng::from_entropy();
+    /// let lattice = Lattice::from_array_rng(array, rng);
     /// # Ok(())
     /// # }
     /// ```
     ///
     /// # Panics
     ///
-    /// The function will panic if `array` is not
-    /// [`square`][ndarray::ArrayBase::is_square] or if any of the spins
-    /// has incorrect value (neither `-1` nor `1`).
+    /// The function will panic if or if any of the spins has incorrect value
+    /// (neither `-1` nor `1`).
     ///
     /// ```should_panic
     /// # fn main() -> Result<(), Box<std::error::Error>> {
     /// # use ::ndarray::prelude::*;
+    /// # use ::rand::prelude::*;
     /// # use ising_lib::prelude::*;
     /// let array = Array::from_shape_vec((2, 2), vec![5, -1, 1, -1])?;
     /// //                                             ↑ incorrect spin value
-    /// let lattice = Lattice::from_array(array);
+    /// let rng = SmallRng::from_entropy();
+    /// let lattice = Lattice::from_array_rng(array, rng);
     /// # Ok(())
     /// # }
     /// ```
-    ///
-    /// ```should_panic
-    /// # fn main() -> Result<(), Box<std::error::Error>> {
-    /// # use ::ndarray::prelude::*;
-    /// # use ising_lib::prelude::*;
-    /// let array = Array::from_shape_vec((1, 4), vec![1, 1, 1, 1])?;
-    /// //                                 ↑  ↑ array isn't square
-    /// let lattice = Lattice::from_array(array);
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn from_array(array: Array2<i32>) -> Self {
-        assert!(array.is_square(), "Array is not square.");
+    pub fn from_array_rng(array: Array2<i32>, rng: R) -> Self {
         assert!(
             array.iter().all(|spin| *spin == 1 || *spin == -1),
             "Invalid spin value."
         );
 
+        let roll_index = |ix: usize, amt: i32, max: usize| {
+            let max = max as i32;
+
+            ((ix as i32 + amt + max) % max) as usize
+        };
+
+        let (width, height) = array.dim();
+
+        let neighbors = Array2::from_shape_fn((width, height), |ix| {
+            [
+                (roll_index(ix.0, 1, width), ix.1),   // right
+                (ix.0, roll_index(ix.1, 1, height)),  // bottom
+                (roll_index(ix.0, -1, width), ix.1),  // left
+                (ix.0, roll_index(ix.1, -1, height)), // top
+            ]
+        });
+
         Lattice {
-            size: array.shape()[0],
+            dims: (width, height),
             inner: array,
-            rng: Box::new(SmallRng::from_entropy()),
+            n_of_spins: width as i32 * height as i32,
+            rng,
+            neighbors,
         }
     }
 
-    /// Returns the size of the lattice.
-    pub fn size(&self) -> usize {
-        self.size
+    /// Return lattice's dimensions.
+    pub fn dims(&self) -> (usize, usize) {
+        self.dims
     }
 
-    /// TODO
-    pub fn gen_neighbor_indices(
-        &self,
-        (i, j): (usize, usize),
-        amt: isize,
-    ) -> ((usize, usize), (usize, usize)) {
-        let size = self.size as isize;
-
-        (
-            (i, ((j as isize + size + amt) % size) as usize),
-            (((i as isize + size + amt) % size) as usize, j),
-        )
-    }
-
-    /// Returns the product of the `(ith, jth)` spin and the sum of all of its
+    /// Return the product of the `(ith, jth)` spin and the sum of all of its
     /// neighbors.
-    fn spin_times_all_neighbors(&self, (i, j): (usize, usize)) -> i32 {
-        assert!(i < self.size && j < self.size);
-
-        let (n_1, n_2) = self.gen_neighbor_indices((i, j), 1);
-        let (n_3, n_4) = self.gen_neighbor_indices((i, j), -1);
-
-        self.inner[(i, j)]
-            * [n_1, n_2, n_3, n_4]
+    fn spin_times_all_neighbors(&self, ix: (usize, usize)) -> i32 {
+        self.inner[ix]
+            * self.neighbors[ix]
                 .iter()
-                .map(|ix| self.inner[*ix])
+                .map(|n_ix| self.inner[*n_ix])
                 .sum::<i32>()
     }
 
-    /// Returns the product of the `(ith, jth)` spin and the sum of two of its
+    /// Return the product of the `(ith, jth)` spin and the sum of two of its
     /// neighbors (the right one and the bottom one).
-    fn spin_times_two_neighbors(&self, (i, j): (usize, usize)) -> i32 {
-        assert!(i < self.size && j < self.size);
-
-        let (n_1, n_2) = self.gen_neighbor_indices((i, j), 1);
-
-        self.inner[(i, j)]
-            * [n_1, n_2].iter().map(|ix| self.inner[*ix]).sum::<i32>()
+    fn spin_times_two_neighbors(&self, ix: (usize, usize)) -> i32 {
+        self.inner[ix]
+            * self.neighbors[ix][0..2]
+                .iter()
+                .map(|n_ix| self.inner[*n_ix])
+                .sum::<i32>()
     }
 
-    /// Returns the difference of energy that would be caused by
+    /// Return the difference of energy that would be caused by
     /// flipping the `(ith, jth)` spin without actually doing it.
     /// Used to determine the probability of a flip.
     ///
@@ -148,20 +135,18 @@ impl Lattice {
     ///
     /// # Panics
     ///
-    /// The function will panic if the index is out of bounds.
+    /// This function will panic if the index is out of bounds.
     ///
     /// ```should_panic
     /// # use ising_lib::prelude::*;
-    /// let lattice = Lattice::new(10);
+    /// let lattice = Lattice::new((10, 10));
     /// let _ = lattice.measure_E_diff((42, 0), 1.0);
     /// ```
     pub fn measure_E_diff(&self, (i, j): (usize, usize), J: f64) -> f64 {
-        assert!(i < self.size && j < self.size);
-
         2.0 * J * f64::from(self.spin_times_all_neighbors((i, j)))
     }
 
-    /// Returns the energy of the lattice.
+    /// Return the energy of the lattice.
     pub fn measure_E(&self, J: f64) -> f64 {
         -J * f64::from(
             self.inner
@@ -171,30 +156,44 @@ impl Lattice {
         )
     }
 
-    /// Returns the magnetization of the lattice. The magnetization is
+    /// Return the magnetization of the lattice. The magnetization is
     /// a value in range `[0.0, 1.0]` and it is the absolute value of the mean
     /// spin value.
     pub fn measure_I(&self) -> f64 {
-        f64::from(self.inner.sum().abs()) / self.size.pow(2) as f64
+        f64::from(self.inner.sum().abs()) / f64::from(self.n_of_spins)
     }
 
-    /// Flips the `(ith, jth)` spin.
+    /// Flip the `(ith, jth)` spin.
     ///
     /// # Panics
     ///
     /// This function panics if the index is out of bounds.
-    pub fn flip_spin(&mut self, (i, j): (usize, usize)) {
-        assert!(i < self.size && j < self.size);
-
-        *self.inner.get_mut((i, j)).unwrap() *= -1;
+    pub fn flip_spin(&mut self, ix: (usize, usize)) {
+        *self.inner.get_mut(ix).unwrap() *= -1;
     }
 
-    /// Returns a valid, randomly generated spin index.
+    /// Return a valid, randomly generated spin index.
     pub fn gen_random_index(&mut self) -> (usize, usize) {
         (
-            self.rng.gen_range(0, self.size) as usize,
-            self.rng.gen_range(0, self.size) as usize,
+            self.rng.gen_range(0, self.dims.0),
+            self.rng.gen_range(0, self.dims.1),
         )
+    }
+}
+
+impl Lattice<SmallRng> {
+    /// Create a new of certain dimensions with randomly generated
+    /// spins. [`SmallRng`][rand::prelude::SmallRng] is used as a RNG.
+    pub fn new(dims: (usize, usize)) -> Self {
+        Self::from_rng(dims, SmallRng::from_entropy())
+    }
+
+    /// Create a new lattice from provided array of spins.
+    /// [`SmallRng`][rand::prelude::SmallRng] is used as a RNG.
+    ///
+    /// See [`Lattice::from_array_rng`].
+    pub fn from_array(array: Array2<i32>) -> Self {
+        Self::from_array_rng(array, SmallRng::from_entropy())
     }
 }
 
@@ -209,18 +208,37 @@ mod test {
     }
 
     #[test]
-    fn test_create_lattice() {
-        let lattice = Lattice::new(40);
+    fn test_lattice_from_rng() {
+        let rng = SmallRng::from_entropy();
+        let lattice = Lattice::from_rng((17, 10), rng);
 
-        assert_eq!(lattice.size(), 40);
+        assert_eq!(lattice.dims(), (17, 10));
     }
 
     #[test]
-    fn test_create_lattice_from_array() {
+    fn test_lattice_from_array_rng() {
         let array = Array::from_shape_vec((2, 2), vec![1, -1, 1, -1]).unwrap();
+        let rng = SmallRng::from_entropy();
+
+        let lattice = Lattice::from_array_rng(array, rng);
+
+        assert_eq!(lattice.dims(), (2, 2));
+    }
+
+    #[test]
+    fn test_lattice_new() {
+        let lattice = Lattice::new((40, 20));
+
+        assert_eq!(lattice.dims(), (40, 20));
+    }
+
+    #[test]
+    fn test_lattice_from_array() {
+        let array = Array::from_shape_vec((2, 2), vec![1, -1, 1, -1]).unwrap();
+
         let lattice = Lattice::from_array(array);
 
-        assert_eq!(lattice.size(), 2);
+        assert_eq!(lattice.dims(), (2, 2));
     }
 
     #[test]

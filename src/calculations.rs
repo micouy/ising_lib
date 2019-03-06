@@ -1,7 +1,6 @@
 //! Utilities for calculations and measurements.
 
-/// Calculates average energy fluctuation at the given temperature from a slice
-/// of energy values.
+/// Calculate average energy fluctuation at given temperature from energy levels.
 pub fn calc_dE(Es: &[f64], T: f64) -> f64 {
     let n = Es.len() as f64;
     let avg_E_sq = (Es.iter().fold(0.0, |sum, E| sum + E.powi(2)) as f64) / n;
@@ -10,7 +9,7 @@ pub fn calc_dE(Es: &[f64], T: f64) -> f64 {
     (avg_E_sq - avg_E.powi(2)) / T
 }
 
-/// Calculates magnetic susceptibility from an slice of magnetization values.
+/// Calculate average magnetic susceptibility from magnetization levels.
 pub fn calc_X(Is: &[f64]) -> f64 {
     let n = Is.len() as f64;
     let avg_I_sq = (Is.iter().fold(0.0, |sum, I| sum + I.powi(2)) as f64) / n;
@@ -19,15 +18,28 @@ pub fn calc_X(Is: &[f64]) -> f64 {
     avg_I_sq - avg_I.powi(2)
 }
 
-/// Calculates average magnetization.
+/// Calculate average magnetization from magnetization levels.
 pub fn calc_I(Is: &[f64]) -> f64 {
     Is.iter().sum::<f64>() / Is.len() as f64
 }
 
-/// Calculates the probability of a flip based on the energy difference it would
+/// Calculate the probability of a flip based on the energy difference it would
 /// cause and the temperature.
 pub fn calc_flip_probability(E_diff: f64, T: f64, K: f64) -> f64 {
     // a physical system tends to the lowest energy state possible
+
+    // the plot of this function looks someting like this:
+    //
+    // probability
+    //
+    // 1→ * * * * * * * * * * * * *
+    //                            *
+    //                            *
+    //                             *
+    //                               *
+    // 0→                              * * * * * * * * * * * * *
+    //                            ↑
+    //                            0                           dE
 
     if E_diff < 0.0 {
         // if the `E_diff` is negative, the flip is entirely probable
@@ -52,13 +64,24 @@ pub struct TRange {
 }
 
 impl TRange {
-    /// Creates a new [`TRange`] iterator with `T_step` temperature step.
+    /// Create an iterator over temperature values between `T_min` and `T_max`
+    /// with `T_step` temperature step.
+    ///
+    /// # Examples
+    /// ```
+    /// # use ising_lib::prelude::*;
+    /// let t_range = TRange::from_step(0.1, 4.0, 0.1);
+    ///
+    /// for T in t_range {
+    ///     println!("{}", T);
+    /// }
+    /// ```
     ///
     /// # Panics
     ///
     /// This method will panic if `T_min` is greater than or equal to `T_max`
     /// or if `T_step` is not positive.
-    pub fn new_step(T_min: f64, T_max: f64, T_step: f64) -> Self {
+    pub fn from_step(T_min: f64, T_max: f64, T_step: f64) -> Self {
         assert!(T_min < T_max && T_step > 0.0);
 
         Self {
@@ -69,12 +92,12 @@ impl TRange {
         }
     }
 
-    /// Creates a new [`TRange`] iterator over `n` temperature values.
+    /// Create an iterator over `n` temperature values between `T_min` and `T_max`.
     ///
     /// # Panics
     ///
     /// This method will panic if `T_min` is greater than or equal to `T_max`.
-    pub fn new_n(T_min: f64, T_max: f64, n: i32) -> Self {
+    pub fn from_n(T_min: f64, T_max: f64, n: i32) -> Self {
         assert!(T_min < T_max);
 
         Self {
@@ -159,7 +182,7 @@ mod test {
     fn test_generate_T_range() {
         let (T_min, T_max) = (0.2, 0.7);
         let n = 5;
-        let T_range = TRange::new_n(T_min, T_max, n).collect::<Vec<f64>>();
+        let T_range = TRange::from_n(T_min, T_max, n).collect::<Vec<f64>>();
 
         assert_eq!(T_range, vec![0.2, 0.3, 0.4, 0.5, 0.6, 0.7]);
     }

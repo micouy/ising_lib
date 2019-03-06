@@ -38,7 +38,11 @@ fn compose_results(records: &[Record]) -> String {
         .collect::<Vec<String>>()
         .join("\n");
 
-    let mut contents = format!("{headers}\n{records}\n", headers=headers, records=records);
+    let mut contents = format!(
+        "{headers}\n{records}\n",
+        headers = headers,
+        records = records
+    );
     contents.push_str("\n");
 
     contents
@@ -80,9 +84,9 @@ fn main() {
     assert!(Path::new(&dir_name).is_dir());
 
     let mut rng = thread_rng();
-    let mut lattice = Lattice::new(params.lattice_size);
+    let mut lattice = Lattice::new((params.lattice_size, params.lattice_size));
     let Ts: Vec<f64> =
-        TRange::new_step(params.T_range.0, params.T_range.1, 0.1).collect();
+        TRange::from_step(params.T_range.0, params.T_range.1, 0.1).collect();
 
     let bar_count = (params.measurements_per_T * Ts.len()) as u64;
     let mut pb = ProgressBar::new(bar_count);
