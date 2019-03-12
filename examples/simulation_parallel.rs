@@ -19,7 +19,6 @@ struct Params {
     attempts_per_flip: usize,
     lattice_size: usize,
     J: f64,
-    K: f64,
 }
 
 struct Record {
@@ -76,7 +75,6 @@ fn main() {
         attempts_per_flip: 20,
         lattice_size: size,
         J: 1.0,
-        K: 1.0,
     };
 
     let dir_name = args()
@@ -125,7 +123,7 @@ fn main() {
                         let ix = lattice.gen_random_index();
                         let E_diff = lattice.measure_E_diff(ix, params.J);
                         let probability =
-                            calc_flip_probability(E_diff, T, params.K);
+                            calc_flip_probability(E_diff, T);
 
                         if probability > rng.gen() {
                             lattice.flip_spin(ix);
@@ -149,7 +147,7 @@ fn main() {
                                 let E_diff =
                                     lattice.measure_E_diff(ix, params.J);
                                 let probability =
-                                    calc_flip_probability(E_diff, T, params.K);
+                                    calc_flip_probability(E_diff, T);
 
                                 if probability > rng.gen() {
                                     lattice.flip_spin(ix);

@@ -25,7 +25,7 @@ pub fn calc_I(Is: &[f64]) -> f64 {
 
 /// Calculate the probability of a flip based on the energy difference it would
 /// cause and the temperature.
-pub fn calc_flip_probability(E_diff: f64, T: f64, K: f64) -> f64 {
+pub fn calc_flip_probability(E_diff: f64, T: f64) -> f64 {
     // a physical system tends to the lowest energy state possible
 
     // the plot of this function looks someting like this:
@@ -50,7 +50,7 @@ pub fn calc_flip_probability(E_diff: f64, T: f64, K: f64) -> f64 {
         // the probability of the flip, and the greater the `E_diff`,
         // the lower the probability
 
-        std::f64::consts::E.powf(-E_diff / (K * T))
+        std::f64::consts::E.powf(-E_diff / T)
     }
 }
 
@@ -164,16 +164,15 @@ mod test {
 
     #[test]
     fn test_calculate_flip_probability() {
-        let k = 1.0;
         let T = 10.0;
 
         let E_diff = -10.0;
-        let probability = calc_flip_probability(E_diff, k, T);
+        let probability = calc_flip_probability(E_diff, T);
 
         assert!(float_error(probability, 1.0) < 0.01);
 
         let E_diff = 10.0;
-        let probability = calc_flip_probability(E_diff, k, T);
+        let probability = calc_flip_probability(E_diff, T);
 
         assert!(float_error(probability, 0.37) < 0.01);
     }
