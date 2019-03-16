@@ -19,7 +19,8 @@ pub struct Lattice<R: RngCore> {
 impl<R: RngCore> Lattice<R> {
     /// Create a new lattice from provided RNG with randomly generated spins.
     pub fn from_rng(size: (usize, usize), mut rng: R) -> Self {
-        let inner = Array2::from_shape_fn(size, |_| *[-1, 1].choose(&mut rng).unwrap());
+        let inner =
+            Array2::from_shape_fn(size, |_| *[-1, 1].choose(&mut rng).unwrap());
 
         Self::from_array_rng(inner, rng)
     }
@@ -142,11 +143,48 @@ impl<R: RngCore> Lattice<R> {
     /// let lattice = Lattice::new((10, 10));
     /// let _ = lattice.measure_E_diff((42, 0), 1.0);
     /// ```
-    pub fn measure_E_diff(&self, (i, j): (usize, usize), J: f64) -> f64 {
-        2.0 * J * f64::from(self.spin_times_all_neighbors((i, j)))
+    pub fn measure_E_diff(&self, ix: (usize, usize), J: f64) -> f64 {
+        2.0 * J * f64::from(self.spin_times_all_neighbors(ix))
+    }
+
+    /// Return the difference of energy that would be caused by
+    /// flipping the `(ith, jth)` spin in the presence of an external magnetic field without actually doing it.
+    /// Used to determine the probability of a flip.
+    ///
+    /// ```text
+    /// Lattice:	External magnetic field:
+    /// ##| a|##	##|##|##
+    /// --------	--------
+    ///  b| s| c	##| h|##
+    /// --------	--------
+    /// ##| d|##	##|##|##
+    ///
+    /// E_2 - E_1 =
+    ///  = ((-J) * (-s) * (a + b + c + d) - h * (-s)) - ((-J) * s * (a + b + c + d) - h * s) =
+    ///  = ((-s) - s) * (-J) * (a + b + c + d) + ((-s) - s) * (-h) =
+    ///  = -2 * s * ((-J) * (a + b + c + d) - h) =
+    ///  = 2 * s * (J * (a + b + c + d) + h)
+    ///  ```
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the index is out of bounds.
+    ///
+    /// ```should_panic
+    /// # use ising_lib::prelude::*;
+    /// let lattice = Lattice::new((10, 10));
+    /// let _ = lattice.measure_E_diff((42, 0), 1.0);
+    /// ```
+    pub fn measure_E_diff_with_h(&self, ix: (usize, usize), h: &Array2<f64>, J: f64) -> f64 {
+        2.0 * (J * f64::from(self.spin_times_all_neighbors(ix)) + f64::from(self.inner[ix]) * h[ix])
     }
 
     /// Return the energy of the lattice.
+    ///
+    /// The formula:
+    /// ```text
+    /// E = -J * ∑(s_i * s_j)
+    /// ```
     pub fn measure_E(&self, J: f64) -> f64 {
         -J * f64::from(
             self.inner
@@ -154,6 +192,21 @@ impl<R: RngCore> Lattice<R> {
                 .map(|(ix, _)| self.spin_times_two_neighbors(ix))
                 .sum::<i32>(),
         )
+    }
+
+    /// Return the energy of the lattice in the presence of an external magnetic field.
+    ///
+    /// The formula:
+    /// ```text
+    /// E = -J * ∑(s_i * s_j) - ∑(s_i * h_i)
+    /// ```
+    pub fn measure_E_with_h(&self, J: f64, h: &Array2<f64>) -> f64 {
+        -J * f64::from(
+            self.inner
+                .indexed_iter()
+                .map(|(ix, _)| self.spin_times_two_neighbors(ix))
+                .sum::<i32>(),
+        ) - self.inner.indexed_iter().map(|(ix, s)| f64::from(*s) * h[ix]).sum::<f64>()
     }
 
     /// Return the magnetization of the lattice. The magnetization is
@@ -266,6 +319,22 @@ mod test {
     }
 
     #[test]
+    fn test_measure_E_difference_in_magnetic_field() {
+        let array =
+            Array::from_shape_vec((3, 3), vec![-1, -1, 1, 1, 1, 1, -1, 1, 1])
+                .unwrap();
+        let h =
+            Array::from_shape_vec((3, 3), vec![-1.0, -1.0, 1.0, 1.0, -7.0, 1.0, -1.0, 1.0, 1.0])
+                .unwrap();
+        let lattice = Lattice::from_array(array);
+        let J = 1.0;
+
+        let E_diff = lattice.measure_E_diff_with_h((1, 1), &h, J);
+
+        assert_eq!(E_diff, -10.0);
+    }
+
+    #[test]
     fn test_measure_E() {
         let array =
             Array::from_shape_vec((3, 3), vec![-1, -1, -1, 1, 1, -1, 1, 1, -1])
@@ -276,6 +345,22 @@ mod test {
         let E = lattice.measure_E(J);
 
         assert_eq!(E, -2.0);
+    }
+
+    #[test]
+    fn test_measure_E_in_magnetic_field() {
+        let array =
+            Array::from_shape_vec((3, 3), vec![-1, -1, -1, 1, 1, -1, 1, 1, -1])
+                .unwrap();
+        let h =
+            Array::from_shape_vec((3, 3), vec![-1.0, -1.0, 1.0, 1.0, -7.0, 1.0, -1.0, 1.0, 1.0])
+                .unwrap();
+        let lattice = Lattice::from_array(array);
+        let J = 1.0;
+
+        let E = lattice.measure_E_with_h(J, &h);
+
+        assert_eq!(E, 5.0);
     }
 
     #[test]
