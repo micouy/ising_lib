@@ -181,7 +181,6 @@ impl<R: RngCore> Lattice<R> {
 
     /// Return the energy of the lattice.
     ///
-    /// The formula:
     /// ```text
     /// E = -J * ∑(s_i * s_j)
     /// ```
@@ -196,7 +195,6 @@ impl<R: RngCore> Lattice<R> {
 
     /// Return the energy of the lattice in the presence of an external magnetic field.
     ///
-    /// The formula:
     /// ```text
     /// E = -J * ∑(s_i * s_j) - ∑(s_i * h_i)
     /// ```
@@ -206,12 +204,16 @@ impl<R: RngCore> Lattice<R> {
                 .indexed_iter()
                 .map(|(ix, _)| self.spin_times_two_neighbors(ix))
                 .sum::<i32>(),
-        ) - self.inner.indexed_iter().map(|(ix, s)| f64::from(*s) * h[ix]).sum::<f64>()
+        ) - (self.inner.map(|s| f64::from(*s)) * h).sum()
     }
 
     /// Return the magnetization of the lattice. The magnetization is
     /// a value in range `[0.0, 1.0]` and it is the absolute value of the mean
     /// spin value.
+    ///
+    /// ```text
+    /// I = 1/n * ∑s_i
+    /// ```
     pub fn measure_I(&self) -> f64 {
         f64::from(self.inner.sum().abs()) / f64::from(self.n_of_spins)
     }
