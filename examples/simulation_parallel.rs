@@ -18,7 +18,6 @@ struct Params {
     flips_per_measurement: usize,
     attempts_per_flip: usize,
     lattice_size: usize,
-    J: f64,
 }
 
 struct Record {
@@ -74,7 +73,6 @@ fn main() {
         flips_per_measurement: size * size,
         attempts_per_flip: 20,
         lattice_size: size,
-        J: 1.0,
     };
 
     let dir_name = args()
@@ -121,7 +119,7 @@ fn main() {
                 let _ = (0..params.attempts_per_flip)
                     .map(|_| {
                         let ix = lattice.gen_random_index();
-                        let E_diff = lattice.measure_E_diff(ix, params.J);
+                        let E_diff = lattice.measure_E_diff(ix);
                         let probability =
                             calc_flip_probability(E_diff, T);
 
@@ -145,7 +143,7 @@ fn main() {
                             .map(|_| {
                                 let ix = lattice.gen_random_index();
                                 let E_diff =
-                                    lattice.measure_E_diff(ix, params.J);
+                                    lattice.measure_E_diff(ix);
                                 let probability =
                                     calc_flip_probability(E_diff, T);
 
@@ -163,7 +161,7 @@ fn main() {
 
                     let _ = pb_tx.send(());
 
-                    (lattice.measure_E(params.J), lattice.measure_I())
+                    (lattice.measure_E(), lattice.measure_I())
                 })
                 .unzip::<_, _, Vec<_>, Vec<_>>();
 

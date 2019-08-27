@@ -25,6 +25,11 @@ impl<R: RngCore> Lattice<R> {
         Self::from_array_rng(inner, rng)
     }
 
+    /// View inner array.
+    pub fn inner(&self) -> ndarray::ArrayView<i32, ndarray::Dim<[ndarray::Ix; 2]>> {
+        self.inner.view()
+    }
+
     /// Create a new lattice from provided array and RNG.
     ///
     /// # Examples
@@ -141,10 +146,10 @@ impl<R: RngCore> Lattice<R> {
     /// ```should_panic
     /// # use ising_lib::prelude::*;
     /// let lattice = Lattice::new((10, 10));
-    /// let _ = lattice.measure_E_diff((42, 0), 1.0);
+    /// let _ = lattice.measure_E_diff((42, 0));
     /// ```
-    pub fn measure_E_diff(&self, ix: (usize, usize), J: f64) -> f64 {
-        2.0 * J * f64::from(self.spin_times_all_neighbors(ix))
+    pub fn measure_E_diff(&self, ix: (usize, usize)) -> f64 {
+        2.0 * f64::from(self.spin_times_all_neighbors(ix))
     }
 
     /// Return the difference of energy that would be caused by
@@ -173,10 +178,10 @@ impl<R: RngCore> Lattice<R> {
     /// ```should_panic
     /// # use ising_lib::prelude::*;
     /// let lattice = Lattice::new((10, 10));
-    /// let _ = lattice.measure_E_diff((42, 0), 1.0);
+    /// let _ = lattice.measure_E_diff((42, 0));
     /// ```
-    pub fn measure_E_diff_with_h(&self, ix: (usize, usize), h: &Array2<f64>, J: f64) -> f64 {
-        2.0 * (J * f64::from(self.spin_times_all_neighbors(ix)) + f64::from(self.inner[ix]) * h[ix])
+    pub fn measure_E_diff_with_h(&self, ix: (usize, usize), h: &Array2<f64>) -> f64 {
+        2.0 * (f64::from(self.spin_times_all_neighbors(ix)) + f64::from(self.inner[ix]) * h[ix])
     }
 
     /// Return the energy of the lattice.
@@ -184,8 +189,8 @@ impl<R: RngCore> Lattice<R> {
     /// ```text
     /// E = -J * ∑(s_i * s_j)
     /// ```
-    pub fn measure_E(&self, J: f64) -> f64 {
-        -J * f64::from(
+    pub fn measure_E(&self) -> f64 {
+        -f64::from(
             self.inner
                 .indexed_iter()
                 .map(|(ix, _)| self.spin_times_two_neighbors(ix))
@@ -198,8 +203,8 @@ impl<R: RngCore> Lattice<R> {
     /// ```text
     /// E = -J * ∑(s_i * s_j) - ∑(s_i * h_i)
     /// ```
-    pub fn measure_E_with_h(&self, J: f64, h: &Array2<f64>) -> f64 {
-        -J * f64::from(
+    pub fn measure_E_with_h(&self, h: &Array2<f64>) -> f64 {
+        -f64::from(
             self.inner
                 .indexed_iter()
                 .map(|(ix, _)| self.spin_times_two_neighbors(ix))
@@ -313,9 +318,8 @@ mod test {
             Array::from_shape_vec((3, 3), vec![-1, -1, 1, 1, 1, 1, -1, 1, 1])
                 .unwrap();
         let lattice = Lattice::from_array(array);
-        let J = 1.0;
 
-        let E_diff = lattice.measure_E_diff((1, 1), J);
+        let E_diff = lattice.measure_E_diff((1, 1));
 
         assert_eq!(E_diff, 4.0);
     }
@@ -329,9 +333,8 @@ mod test {
             Array::from_shape_vec((3, 3), vec![-1.0, -1.0, 1.0, 1.0, -7.0, 1.0, -1.0, 1.0, 1.0])
                 .unwrap();
         let lattice = Lattice::from_array(array);
-        let J = 1.0;
 
-        let E_diff = lattice.measure_E_diff_with_h((1, 1), &h, J);
+        let E_diff = lattice.measure_E_diff_with_h((1, 1), &h);
 
         assert_eq!(E_diff, -10.0);
     }
@@ -342,9 +345,8 @@ mod test {
             Array::from_shape_vec((3, 3), vec![-1, -1, -1, 1, 1, -1, 1, 1, -1])
                 .unwrap();
         let lattice = Lattice::from_array(array);
-        let J = 1.0;
 
-        let E = lattice.measure_E(J);
+        let E = lattice.measure_E();
 
         assert_eq!(E, -2.0);
     }
@@ -358,9 +360,8 @@ mod test {
             Array::from_shape_vec((3, 3), vec![-1.0, -1.0, 1.0, 1.0, -7.0, 1.0, -1.0, 1.0, 1.0])
                 .unwrap();
         let lattice = Lattice::from_array(array);
-        let J = 1.0;
 
-        let E = lattice.measure_E_with_h(J, &h);
+        let E = lattice.measure_E_with_h(&h);
 
         assert_eq!(E, 5.0);
     }
@@ -383,13 +384,12 @@ mod test {
         )
         .unwrap();
         let mut lattice = Lattice::from_array(array);
-        let J = 1.0;
 
-        let E_1 = lattice.measure_E(J);
+        let E_1 = lattice.measure_E();
 
         lattice.flip_spin((1, 1));
 
-        let E_2 = lattice.measure_E(J);
+        let E_2 = lattice.measure_E();
 
         assert!(float_error(E_2 - E_1, -4.0) < 0.01);
     }
