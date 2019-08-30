@@ -12,8 +12,8 @@ fn bench_calculate_flip_probability(c: &mut Criterion) {
 
     c.bench_function("calculate flip probability", move |b| {
         b.iter(|| {
-            let E_diff = lattice.measure_E_diff((10, 42), 1.0);
-            let probability = calc_flip_probability(E_diff, 1.0, 1.0);
+            let E_diff = lattice.measure_E_diff((10, 42));
+            let probability = calc_flip_probability(E_diff, 1.0);
         })
     });
 }
@@ -23,7 +23,7 @@ fn bench_measure_E(c: &mut Criterion) {
 
     c.bench_function("measure E", move |b| {
         b.iter(|| {
-            let E = lattice.measure_E(1.0);
+            let E = lattice.measure_E();
         })
     });
 }
