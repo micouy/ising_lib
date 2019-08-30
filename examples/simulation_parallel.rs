@@ -112,16 +112,16 @@ fn main() {
         .into_par_iter() // notice the `into_par_iter`
         .map(|(T, pb_tx)| {
             let mut rng = thread_rng();
-            let mut lattice = Lattice::new((params.lattice_size, params.lattice_size));
+            let mut lattice =
+                Lattice::new([params.lattice_size; 2]);
 
             // "cool" the lattice to its natural state at temperature `T`
             (0..params.flips_to_skip).for_each(|_| {
                 let _ = (0..params.attempts_per_flip)
                     .map(|_| {
-                        let ix = lattice.gen_random_index();
+                        let ix = lattice.gen_random_index(&mut rng);
                         let E_diff = lattice.measure_E_diff(ix);
-                        let probability =
-                            calc_flip_probability(E_diff, T);
+                        let probability = calc_flip_probability(E_diff, T);
 
                         if probability > rng.gen() {
                             lattice.flip_spin(ix);
@@ -141,9 +141,8 @@ fn main() {
                     (0..params.flips_per_measurement).for_each(|_| {
                         let _ = (0..params.attempts_per_flip)
                             .map(|_| {
-                                let ix = lattice.gen_random_index();
-                                let E_diff =
-                                    lattice.measure_E_diff(ix);
+                                let ix = lattice.gen_random_index(&mut rng);
+                                let E_diff = lattice.measure_E_diff(ix);
                                 let probability =
                                     calc_flip_probability(E_diff, T);
 

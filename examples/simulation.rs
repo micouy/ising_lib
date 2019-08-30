@@ -80,7 +80,7 @@ fn main() {
     assert!(Path::new(&dir_name).is_dir());
 
     let mut rng = thread_rng();
-    let mut lattice = Lattice::new((params.lattice_size, params.lattice_size));
+    let mut lattice = Lattice::new([params.lattice_size; 2]);
     let Ts: Vec<f64> =
         TRange::from_step(params.T_range.0, params.T_range.1, 0.1).collect();
 
@@ -94,7 +94,7 @@ fn main() {
     (0..params.flips_to_skip).for_each(|_| {
         let _ = (0..params.attempts_per_flip)
             .map(|_| {
-                let ix = lattice.gen_random_index();
+                let ix = lattice.gen_random_index(&mut rng);
                 let E_diff = lattice.measure_E_diff(ix);
                 let probability =
                     calc_flip_probability(E_diff, params.T_range.0);
@@ -119,9 +119,8 @@ fn main() {
                     (0..params.flips_per_measurement).for_each(|_| {
                         let _ = (0..params.attempts_per_flip)
                             .map(|_| {
-                                let ix = lattice.gen_random_index();
-                                let E_diff =
-                                    lattice.measure_E_diff(ix);
+                                let ix = lattice.gen_random_index(&mut rng);
+                                let E_diff = lattice.measure_E_diff(ix);
                                 let probability =
                                     calc_flip_probability(E_diff, T);
 

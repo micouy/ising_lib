@@ -1,6 +1,6 @@
 //! Stuff related to spin lattice.
 
-use ::ndarray::prelude::*;
+use ::ndarray::{prelude::*, NdIndex};
 use ::rand::prelude::*;
 
 /// A struct encapsulating the spin lattice and all the operations performed
@@ -8,29 +8,32 @@ use ::rand::prelude::*;
 ///
 /// The lattice behaves like a torus - spins on opposite edges are considered
 /// each other's neighbors.
-pub struct Lattice<R: RngCore> {
-    dims: (usize, usize),
+pub struct Lattice {
+    dims: [usize; 2],
     n_of_spins: i32,
-    rng: R,
     inner: Array2<i32>,
-    neighbors: Array2<[(usize, usize); 4]>,
+    neighbors: Array2<[[usize; 2]; 4]>,
 }
 
-impl<R: RngCore> Lattice<R> {
-    /// Create a new lattice from provided RNG with randomly generated spins.
-    pub fn from_rng(size: (usize, usize), mut rng: R) -> Self {
-        let inner =
-            Array2::from_shape_fn(size, |_| *[-1, 1].choose(&mut rng).unwrap());
+impl Lattice {
+    /// Create a new lattice of given dims with randomly generated spins.
+    pub fn new(dims: [usize; 2]) -> Self
+    {
+        let inner = Array2::from_shape_fn(dims, |_| {
+            *[-1, 1].choose(&mut SmallRng::from_entropy()).unwrap()
+        });
 
-        Self::from_array_rng(inner, rng)
+        Self::from_array(inner)
     }
 
     /// View inner array.
-    pub fn inner(&self) -> ndarray::ArrayView<i32, ndarray::Dim<[ndarray::Ix; 2]>> {
+    pub fn inner(
+        &self,
+    ) -> ndarray::ArrayView<i32, ndarray::Dim<[ndarray::Ix; 2]>> {
         self.inner.view()
     }
 
-    /// Create a new lattice from provided array and RNG.
+    /// Create a new lattice from provided array.
     ///
     /// # Examples
     ///
@@ -40,8 +43,7 @@ impl<R: RngCore> Lattice<R> {
     /// # use ::rand::prelude::*;
     /// # use ising_lib::prelude::*;
     /// let array = Array::from_shape_vec((2, 2), vec![1, -1, 1, -1])?;
-    /// let rng = SmallRng::from_entropy();
-    /// let lattice = Lattice::from_array_rng(array, rng);
+    /// let lattice = Lattice::from_array(array);
     /// # Ok(())
     /// # }
     /// ```
@@ -58,12 +60,11 @@ impl<R: RngCore> Lattice<R> {
     /// # use ising_lib::prelude::*;
     /// let array = Array::from_shape_vec((2, 2), vec![5, -1, 1, -1])?;
     /// //                                             ↑ incorrect spin value
-    /// let rng = SmallRng::from_entropy();
-    /// let lattice = Lattice::from_array_rng(array, rng);
+    /// let lattice = Lattice::from_array(array);
     /// # Ok(())
     /// # }
     /// ```
-    pub fn from_array_rng(array: Array2<i32>, rng: R) -> Self {
+    pub fn from_array(array: Array2<i32>) -> Self {
         assert!(
             array.iter().all(|spin| *spin == 1 || *spin == -1),
             "Invalid spin value."
@@ -79,30 +80,32 @@ impl<R: RngCore> Lattice<R> {
 
         let neighbors = Array2::from_shape_fn((width, height), |ix| {
             [
-                (roll_index(ix.0, 1, width), ix.1),   // right
-                (ix.0, roll_index(ix.1, 1, height)),  // bottom
-                (roll_index(ix.0, -1, width), ix.1),  // left
-                (ix.0, roll_index(ix.1, -1, height)), // top
+                [roll_index(ix.0, 1, width), ix.1],   // right
+                [ix.0, roll_index(ix.1, 1, height)],  // bottom
+                [roll_index(ix.0, -1, width), ix.1],  // left
+                [ix.0, roll_index(ix.1, -1, height)], // top
             ]
         });
 
         Lattice {
-            dims: (width, height),
+            dims: [width, height],
             inner: array,
             n_of_spins: width as i32 * height as i32,
-            rng,
             neighbors,
         }
     }
 
     /// Return lattice's dimensions.
-    pub fn dims(&self) -> (usize, usize) {
+    pub fn dims(&self) -> [usize; 2] {
         self.dims
     }
 
     /// Return the product of the `(ith, jth)` spin and the sum of all of its
     /// neighbors.
-    fn spin_times_all_neighbors(&self, ix: (usize, usize)) -> i32 {
+    fn spin_times_all_neighbors<I>(&self, ix: I) -> i32
+    where
+        I: NdIndex<ndarray::Dim<[ndarray::Ix; 2]>> + Copy,
+    {
         self.inner[ix]
             * self.neighbors[ix]
                 .iter()
@@ -112,7 +115,10 @@ impl<R: RngCore> Lattice<R> {
 
     /// Return the product of the `(ith, jth)` spin and the sum of two of its
     /// neighbors (the right one and the bottom one).
-    fn spin_times_two_neighbors(&self, ix: (usize, usize)) -> i32 {
+    fn spin_times_two_neighbors<I>(&self, ix: I) -> i32
+    where
+        I: NdIndex<ndarray::Dim<[ndarray::Ix; 2]>> + Copy,
+    {
         self.inner[ix]
             * self.neighbors[ix][0..2]
                 .iter()
@@ -145,16 +151,20 @@ impl<R: RngCore> Lattice<R> {
     ///
     /// ```should_panic
     /// # use ising_lib::prelude::*;
-    /// let lattice = Lattice::new((10, 10));
+    /// let lattice = Lattice::new([10, 10]);
     /// let _ = lattice.measure_E_diff((42, 0));
     /// ```
-    pub fn measure_E_diff(&self, ix: (usize, usize)) -> f64 {
+    pub fn measure_E_diff<I>(&self, ix: I) -> f64
+    where
+        I: NdIndex<ndarray::Dim<[ndarray::Ix; 2]>> + Copy,
+    {
         2.0 * f64::from(self.spin_times_all_neighbors(ix))
     }
 
     /// Return the difference of energy that would be caused by
-    /// flipping the `(ith, jth)` spin in the presence of an external magnetic field without actually doing it.
-    /// Used to determine the probability of a flip.
+    /// flipping the `(ith, jth)` spin in the presence of an external magnetic
+    /// field without actually doing it. Used to determine the probability
+    /// of a flip.
     ///
     /// ```text
     /// Lattice:	External magnetic field:
@@ -174,14 +184,17 @@ impl<R: RngCore> Lattice<R> {
     /// # Panics
     ///
     /// This function will panic if the index is out of bounds.
-    ///
     /// ```should_panic
     /// # use ising_lib::prelude::*;
-    /// let lattice = Lattice::new((10, 10));
+    /// let lattice = Lattice::new([10, 10]);
     /// let _ = lattice.measure_E_diff((42, 0));
     /// ```
-    pub fn measure_E_diff_with_h(&self, ix: (usize, usize), h: &Array2<f64>) -> f64 {
-        2.0 * (f64::from(self.spin_times_all_neighbors(ix)) + f64::from(self.inner[ix]) * h[ix])
+    pub fn measure_E_diff_with_h<I>(&self, ix: I, h: &Array2<f64>) -> f64
+    where
+        I: NdIndex<ndarray::Dim<[ndarray::Ix; 2]>> + Copy,
+    {
+        2.0 * (f64::from(self.spin_times_all_neighbors(ix))
+            + f64::from(self.inner[ix]) * h[ix])
     }
 
     /// Return the energy of the lattice.
@@ -198,7 +211,8 @@ impl<R: RngCore> Lattice<R> {
         )
     }
 
-    /// Return the energy of the lattice in the presence of an external magnetic field.
+    /// Return the energy of the lattice in the presence of an external magnetic
+    /// field.
     ///
     /// ```text
     /// E = -J * ∑(s_i * s_j) - ∑(s_i * h_i)
@@ -228,32 +242,19 @@ impl<R: RngCore> Lattice<R> {
     /// # Panics
     ///
     /// This function panics if the index is out of bounds.
-    pub fn flip_spin(&mut self, ix: (usize, usize)) {
+    pub fn flip_spin<I>(&mut self, ix: I)
+    where
+        I: NdIndex<ndarray::Dim<[ndarray::Ix; 2]>> + Copy,
+    {
         *self.inner.get_mut(ix).unwrap() *= -1;
     }
 
     /// Return a valid, randomly generated spin index.
-    pub fn gen_random_index(&mut self) -> (usize, usize) {
-        (
-            self.rng.gen_range(0, self.dims.0),
-            self.rng.gen_range(0, self.dims.1),
-        )
-    }
-}
-
-impl Lattice<SmallRng> {
-    /// Create a new of certain dimensions with randomly generated
-    /// spins. [`SmallRng`][rand::prelude::SmallRng] is used as a RNG.
-    pub fn new(dims: (usize, usize)) -> Self {
-        Self::from_rng(dims, SmallRng::from_entropy())
-    }
-
-    /// Create a new lattice from provided array of spins.
-    /// [`SmallRng`][rand::prelude::SmallRng] is used as a RNG.
-    ///
-    /// See [`Lattice::from_array_rng`].
-    pub fn from_array(array: Array2<i32>) -> Self {
-        Self::from_array_rng(array, SmallRng::from_entropy())
+    pub fn gen_random_index<R: RngCore>(&mut self, rng: &mut R) -> [usize; 2] {
+        [
+            rng.gen_range(0, self.dims[0] as u64) as usize,
+            rng.gen_range(0, self.dims[1] as u64) as usize,
+        ]
     }
 }
 
@@ -268,28 +269,10 @@ mod test {
     }
 
     #[test]
-    fn test_lattice_from_rng() {
-        let rng = SmallRng::from_entropy();
-        let lattice = Lattice::from_rng((17, 10), rng);
-
-        assert_eq!(lattice.dims(), (17, 10));
-    }
-
-    #[test]
-    fn test_lattice_from_array_rng() {
-        let array = Array::from_shape_vec((2, 2), vec![1, -1, 1, -1]).unwrap();
-        let rng = SmallRng::from_entropy();
-
-        let lattice = Lattice::from_array_rng(array, rng);
-
-        assert_eq!(lattice.dims(), (2, 2));
-    }
-
-    #[test]
     fn test_lattice_new() {
-        let lattice = Lattice::new((40, 20));
+        let lattice = Lattice::new([17, 10]);
 
-        assert_eq!(lattice.dims(), (40, 20));
+        assert_eq!(lattice.dims(), [17, 10]);
     }
 
     #[test]
@@ -298,7 +281,7 @@ mod test {
 
         let lattice = Lattice::from_array(array);
 
-        assert_eq!(lattice.dims(), (2, 2));
+        assert_eq!(lattice.dims(), [2, 2]);
     }
 
     #[test]
@@ -329,9 +312,11 @@ mod test {
         let array =
             Array::from_shape_vec((3, 3), vec![-1, -1, 1, 1, 1, 1, -1, 1, 1])
                 .unwrap();
-        let h =
-            Array::from_shape_vec((3, 3), vec![-1.0, -1.0, 1.0, 1.0, -7.0, 1.0, -1.0, 1.0, 1.0])
-                .unwrap();
+        let h = Array::from_shape_vec(
+            (3, 3),
+            vec![-1.0, -1.0, 1.0, 1.0, -7.0, 1.0, -1.0, 1.0, 1.0],
+        )
+        .unwrap();
         let lattice = Lattice::from_array(array);
 
         let E_diff = lattice.measure_E_diff_with_h((1, 1), &h);
@@ -356,9 +341,11 @@ mod test {
         let array =
             Array::from_shape_vec((3, 3), vec![-1, -1, -1, 1, 1, -1, 1, 1, -1])
                 .unwrap();
-        let h =
-            Array::from_shape_vec((3, 3), vec![-1.0, -1.0, 1.0, 1.0, -7.0, 1.0, -1.0, 1.0, 1.0])
-                .unwrap();
+        let h = Array::from_shape_vec(
+            (3, 3),
+            vec![-1.0, -1.0, 1.0, 1.0, -7.0, 1.0, -1.0, 1.0, 1.0],
+        )
+        .unwrap();
         let lattice = Lattice::from_array(array);
 
         let E = lattice.measure_E_with_h(&h);
