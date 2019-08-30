@@ -1,6 +1,7 @@
 //! Utilities for calculations and measurements.
 
-/// Calculate average energy fluctuation at given temperature from energy levels.
+/// Calculate average energy fluctuation at given temperature from energy
+/// levels.
 pub fn calc_dE(Es: &[f64], T: f64) -> f64 {
     let n = Es.len() as f64;
     let avg_E_sq = (Es.iter().fold(0.0, |sum, E| sum + E.powi(2)) as f64) / n;
@@ -92,7 +93,8 @@ impl TRange {
         }
     }
 
-    /// Create an iterator over `n` temperature values between `T_min` and `T_max`.
+    /// Create an iterator over `n` temperature values between `T_min` and
+    /// `T_max`.
     ///
     /// # Panics
     ///
