@@ -3,7 +3,7 @@ name = "ising_lib"
 description = "Tools for simulating Ising model."
 keywords = ["ising", "physics", "simulation"]
 categories = ["science", "simulation"]
-version = "0.2.0"
+version = "0.3.0"
 authors = ["micouy <szpontaniczny@gmail.com>"]
 edition = "2018"
 license = "MIT"
@@ -14,15 +14,15 @@ repository = "https://github.com/micouy/ising_lib"
 travis-ci = { repository = "micouy/ising_lib" }
 
 [dependencies]
-ndarray = "^0.12"
-rand = "^0.6"
+ndarray = "0.12"
+rand = { version = "0.7", features = ["small_rng"] }
 
 [dev-dependencies]
-pretty_assertions = "^0.6"
-chrono = "^0.4"
-pbr = "^1.0"
-rayon = "^1.0"
-criterion = "0.2"
+pretty_assertions = "0.6"
+chrono = "0.4"
+pbr = "1.0"
+rayon = "1.0"
+criterion = "0.3"
 
 [[bench]]
 name = "lattice"

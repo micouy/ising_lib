@@ -15,8 +15,6 @@ struct Params {
     flips_per_measurement: usize,
     attempts_per_flip: usize,
     lattice_size: usize,
-    J: f64,
-    K: f64,
 }
 
 struct Record {
@@ -72,8 +70,6 @@ fn main() {
         flips_per_measurement: size * size,
         attempts_per_flip: 20,
         lattice_size: size,
-        J: 1.0,
-        K: 1.0,
     };
 
     let dir_name = args()
@@ -84,7 +80,7 @@ fn main() {
     assert!(Path::new(&dir_name).is_dir());
 
     let mut rng = thread_rng();
-    let mut lattice = Lattice::new((params.lattice_size, params.lattice_size));
+    let mut lattice = Lattice::new([params.lattice_size; 2]);
     let Ts: Vec<f64> =
         TRange::from_step(params.T_range.0, params.T_range.1, 0.1).collect();
 
@@ -98,10 +94,10 @@ fn main() {
     (0..params.flips_to_skip).for_each(|_| {
         let _ = (0..params.attempts_per_flip)
             .map(|_| {
-                let ix = lattice.gen_random_index();
-                let E_diff = lattice.measure_E_diff(ix, params.J);
+                let ix = lattice.gen_random_index(&mut rng);
+                let E_diff = lattice.measure_E_diff(ix);
                 let probability =
-                    calc_flip_probability(E_diff, params.T_range.0, params.K);
+                    calc_flip_probability(E_diff, params.T_range.0);
 
                 if probability > rng.gen() {
                     lattice.flip_spin(ix);
@@ -123,11 +119,10 @@ fn main() {
                     (0..params.flips_per_measurement).for_each(|_| {
                         let _ = (0..params.attempts_per_flip)
                             .map(|_| {
-                                let ix = lattice.gen_random_index();
-                                let E_diff =
-                                    lattice.measure_E_diff(ix, params.J);
+                                let ix = lattice.gen_random_index(&mut rng);
+                                let E_diff = lattice.measure_E_diff(ix);
                                 let probability =
-                                    calc_flip_probability(E_diff, T, params.K);
+                                    calc_flip_probability(E_diff, T);
 
                                 if probability > rng.gen() {
                                     lattice.flip_spin(ix);
@@ -143,7 +138,7 @@ fn main() {
 
                     pb.inc();
 
-                    (lattice.measure_E(params.J), lattice.measure_I())
+                    (lattice.measure_E(), lattice.measure_I())
                 })
                 .unzip::<_, _, Vec<_>, Vec<_>>();
 
