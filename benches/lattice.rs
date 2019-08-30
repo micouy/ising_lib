@@ -8,7 +8,7 @@ use ::ising_lib::prelude::*;
 // To keep the results consistent, always run set lattice size to 50.
 
 fn bench_calculate_flip_probability(c: &mut Criterion) {
-    let lattice = Lattice::new((50, 50));
+    let lattice = Lattice::new([50, 50]);
 
     c.bench_function("calculate flip probability", move |b| {
         b.iter(|| {
@@ -19,7 +19,7 @@ fn bench_calculate_flip_probability(c: &mut Criterion) {
 }
 
 fn bench_measure_E(c: &mut Criterion) {
-    let lattice = Lattice::new((50, 50));
+    let lattice = Lattice::new([50, 50]);
 
     c.bench_function("measure E", move |b| {
         b.iter(|| {
