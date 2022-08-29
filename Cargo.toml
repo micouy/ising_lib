@@ -9,7 +9,16 @@ authors = ["dcxSt <dcxstephen@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/micouy/ising_lib"
-# repository = "https://github.com/micouy/ising_lib" # add a repository when there is one
+include = [
+  "Cargo.toml",
+  "src/lattice2d.rs",
+  "src/measurement.rs",
+  "src/monte_carlo_measurement.rs",
+  "src/lib.rs",
+  "tests/integration_tests.rs",
+  "benches/lattice2d_benchmarks.rs",
+]
+
 
 [badges]
 travis-ci = { repository = "micouy/ising_lib" }

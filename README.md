@@ -11,7 +11,7 @@ Thanks to increasing computational capabilities, today we are able to run larger
 
 Visit [this website](https://ising-2d-lattice.netlify.app/) for an interactive demo. [Hint: try clicking on the `+T`, `-T`, and `random` buttons. When the system cools to below a critical temperature it 'quenches' or spontaneously magnetizes—this is an example of a phase change.]
 
-Below is a toy in-terminal visualization demo ([examples/displayrun_lattice2d](https://github.com/dcxSt/ising-lib/tree/main/examples/displayrun_lattice2d)) to give you a look at what's going on under the hood of the simulation.
+Below is a toy in-terminal visualization demo ([examples/displayrun_lattice2d](https://github.com/micouy/ising_lib/tree/master/examples/displayrun_lattice2d)) to give you a look at what's going on under the hood of the simulation.
 
 https://user-images.githubusercontent.com/21654151/156935828-114c918a-d309-42ed-81c6-7f76f75c0f62.mov
 
